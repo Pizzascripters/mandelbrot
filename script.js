@@ -1,5 +1,5 @@
 const squareSize = 8;
-const iterations = 25000;
+const iterations = 1000;
 
 const cameraPresets = [
   {x: -.5, y: 0, zoom: 2},
@@ -55,39 +55,33 @@ function init() {
 }
 
 async function generateMandelbrot(cvs, ctx, camera) {
-  const startX = camera.x - 0.5 * camera.zoom;
-  const startY = - camera.y - 0.5 * camera.zoom * cvs.height / cvs.width;
-  const interval = squareSize * camera.zoom / cvs.width;
-  const numPoints = cvs.width / squareSize;
-
-  let i = 0;
-  let matrix = [];
-
   const worker = new Worker('worker.js');
-  worker.postMessage([startX, startY, interval, numPoints, iterations]);
+  
+  worker.postMessage({
+    x: camera.x - 0.5 * camera.zoom,
+    y: - camera.y - 0.5 * camera.zoom * cvs.height / cvs.width,
+    interval: squareSize * camera.zoom / cvs.width,
+    numPoints: {
+      x: Math.ceil(cvs.width / squareSize),
+      y: Math.ceil(cvs.height / squareSize)
+    },
+    iterations
+  });
 
   worker.onmessage = (e) => {
-    matrix.push(e.data);
-    if(i * squareSize < cvs.height) {
-      worker.postMessage([startX, e.data[0] + interval, interval, numPoints, iterations]);
-    }
-    let y = i * squareSize;
-    let row = matrix[i];
-    i++;
-    window.requestAnimationFrame(() => draw(cvs, ctx, camera, y, row));
+    worker.terminate();
+    window.requestAnimationFrame(() => draw(cvs, ctx, e.data));
   }
 }
 
-function draw(cvs, ctx, camera, y, points) {
-  for(let i = 0; i < cvs.width / squareSize; i++) {
-    let x = i * squareSize;
-    let [r, g, b] = [points[3*i+1], points[3*i+2], points[3*i+3]];
-    ctx.fillStyle = "rgb("+r+","+g+","+b+")";
-    ctx.fillRect(x, y, squareSize, squareSize);
+function draw(cvs, ctx, matrix) {
+  for(let i = 0; i < cvs.height / squareSize; i++) {
+    for(let j = 0; j < cvs.width / squareSize; j++) {
+      let [r, g, b] = [matrix[i][3*j], matrix[i][3*j+1], matrix[i][3*j+2]];
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(j * squareSize, i * squareSize, squareSize, squareSize);
+    }
   }
-  return new Promise((resolve) => {
-    window.requestAnimationFrame(resolve);
-  });
 }
 
 window.addEventListener("load", init);

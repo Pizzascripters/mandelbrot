@@ -2,34 +2,37 @@ const colorCycle = 100;
 
 const L = Math.log(2);
 
-onmessage = (e) => {
+onmessage = (event) => {
   // e.data : [starting x coord, y coord, x interval, # of points, max iterations]
-  // returns a value for each point
-  let [startX, startY, interval, numPoints, iterations] = e.data;
-  let result = new Array(3 * numPoints + 1);
-  result[0] = startY;
-  for(let i = 0; i < numPoints; i++) {
-    let a = startX + i * interval, b = startY, c = a, d = b;
-    let e = a * a, f = b * b;
-    for(let j = 0; j < iterations; j++) {
-      b = 2 * a * b + d;
-      a = e - f + c;
-      e = a * a;
-      f = b * b;
-      g = e + f;
-      if(g >= 4) {
-        let color = findColor(j);
-        result[3*i+1] = color[0];
-        result[3*i+2] = color[1];
-        result[3*i+3] = color[2];
-        break;
+  const data = event.data;
+  const [x, y, interval, nx, ny] = [data.x, data.y, data.interval, data.numPoints.x, data.numPoints.y];
+  const iterations = data.iterations;
+  let matrix = new Array(ny);
+  for(let i = 0; i < ny; i++) {
+    matrix[i] = new Array(3 * nx);
+    for(let j = 0; j < nx; j++) {
+      let a = x + j * interval, b = y + i * interval, c = a, d = b;
+      let e = a * a, f = b * b;
+      for(let k = 0; k < iterations; k++) {
+        b = 2 * a * b + d;
+        a = e - f + c;
+        e = a * a;
+        f = b * b;
+        g = e + f;
+        if(g >= 4) {
+          let color = findColor(k);
+          matrix[i][3*j] = color[0];
+          matrix[i][3*j+1] = color[1];
+          matrix[i][3*j+2] = color[2];
+          break;
+        }
+      }
+      if(matrix[i][3*j] === undefined) {
+        matrix[i][3*j] = matrix[i][3*j+1] = matrix[i][3*j+2] = 0;
       }
     }
-    if(result[3*i] === undefined) {
-      result[3*i+1] = result[3*i+2] = result[3*i+3] = 0;
-    }
   }
-  postMessage(result);
+  postMessage(matrix);
 }
 
 function findColor(j) {
