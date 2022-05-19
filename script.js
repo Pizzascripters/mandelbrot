@@ -1,5 +1,4 @@
-const squareSize = 8;
-const iterations = 1000;
+const squareSize = 4;
 
 const cameraPresets = [
   {x: -.5, y: 0, zoom: 2},
@@ -17,71 +16,99 @@ const cameraPresets = [
 
 
 function init() {
-  const cvs = document.getElementById("cvs");
-  const ctx = cvs.getContext("2d");
-
-  let camera = {
+  const cvs = Mandelbrot.cvs = document.getElementById('cvs');
+  const ctx = Mandelbrot.ctx = Mandelbrot.cvs.getContext('2d');
+  const camera = Mandelbrot.camera = {
     x: -0.5,
     y: 0,
     zoom: 4
   };
 
-  document.body.style.margin = "0px";
-  document.body.style.overflow = "hidden";
+  document.body.style.margin = '0px';
+  document.body.style.overflow = 'hidden';
 
   function fullscreen() {
     cvs.width = window.innerWidth;
     cvs.height = window.innerHeight;
-    generateMandelbrot(cvs, ctx, camera);
+    Mandelbrot.generate();
   }
 
-  window.addEventListener("resize", fullscreen);
+  window.addEventListener('resize', fullscreen);
   fullscreen();
 
   window.addEventListener('click', (e) => {
-    camera.x += camera.zoom * (e.clientX / cvs.width - 0.5);
-    camera.y += -cvs.height / cvs.width * camera.zoom * (e.clientY / cvs.height - 0.5)
-    generateMandelbrot(cvs, ctx, camera);
+    Mandelbrot.updateCamera(
+      camera.x + camera.zoom * (e.clientX / cvs.width - 0.5),
+      camera.y - cvs.height / cvs.width * camera.zoom * (e.clientY / cvs.height - 0.5),
+      camera.zoom
+    );
   });
 
   window.addEventListener('wheel', (e) => {
-    if(e.deltaY > 0) {
-      camera.zoom *= 2;
-    } else {
-      camera.zoom /= 2;
-    }
-    generateMandelbrot(cvs, ctx, camera);
+    Mandelbrot.updateCamera(
+      camera.x,
+      camera.y,
+      camera.zoom * (e.deltaY > 0 ? 2 : .5)
+    );
   });
 }
 
-async function generateMandelbrot(cvs, ctx, camera) {
-  const worker = new Worker('worker.js');
-  
-  worker.postMessage({
-    x: camera.x - 0.5 * camera.zoom,
-    y: - camera.y - 0.5 * camera.zoom * cvs.height / cvs.width,
-    interval: squareSize * camera.zoom / cvs.width,
-    numPoints: {
-      x: Math.ceil(cvs.width / squareSize),
-      y: Math.ceil(cvs.height / squareSize)
-    },
-    iterations
-  });
+const Mandelbrot = {
+  cvs: null,
+  ctx: null,
+  camera: null,
+  worker: null,
 
-  worker.onmessage = (e) => {
-    worker.terminate();
-    window.requestAnimationFrame(() => draw(cvs, ctx, e.data));
-  }
-}
+  generate: (camera) => {
+    if(!camera) {
+      camera = Mandelbrot.camera;
+    }
 
-function draw(cvs, ctx, matrix) {
-  for(let i = 0; i < cvs.height / squareSize; i++) {
-    for(let j = 0; j < cvs.width / squareSize; j++) {
-      let [r, g, b] = [matrix[i][3*j], matrix[i][3*j+1], matrix[i][3*j+2]];
-      ctx.fillStyle = `rgb(${r},${g},${b})`;
-      ctx.fillRect(j * squareSize, i * squareSize, squareSize, squareSize);
+    if(Mandelbrot.worker) {
+      // Prevent overlapping computations and renders
+      Mandelbrot.worker.terminate();
+    }
+    Mandelbrot.worker = new Worker('worker.js');
+
+    Mandelbrot.worker.postMessage({
+      x: camera.x - 0.5 * camera.zoom,
+      y: - camera.y - 0.5 * camera.zoom * cvs.height / cvs.width,
+      interval: squareSize * camera.zoom / cvs.width,
+      numPoints: {
+        x: Math.ceil(Mandelbrot.cvs.width / squareSize),
+        y: Math.ceil(Mandelbrot.cvs.height / squareSize)
+      }
+    });
+
+    return new Promise((resolve) => {
+      Mandelbrot.worker.onmessage = (e) => {
+        window.requestAnimationFrame(() => {
+          Mandelbrot.draw(e.data);
+          resolve();
+        });
+      }
+    });
+  },
+
+  updateCamera: (x, y, zoom) => {
+    Mandelbrot.generate({x, y, zoom}).then(() => {
+      Mandelbrot.camera.x = x;
+      Mandelbrot.camera.y = y;
+      Mandelbrot.camera.zoom = zoom;
+    }).catch(console.log);
+  },
+
+  draw: (matrix) => {
+    const nx = Mandelbrot.cvs.width / squareSize,
+          ny = Mandelbrot.cvs.height / squareSize;
+    for(let i = 0; i < ny; i++) {
+      for(let j = 0; j < nx; j++) {
+        let [r, g, b] = [matrix[i][3*j], matrix[i][3*j+1], matrix[i][3*j+2]];
+        Mandelbrot.ctx.fillStyle = `rgb(${r},${g},${b})`;
+        Mandelbrot.ctx.fillRect(j * squareSize, i * squareSize, squareSize, squareSize);
+      }
     }
   }
 }
 
-window.addEventListener("load", init);
+window.addEventListener('load', init);

@@ -1,13 +1,24 @@
 const colorCycle = 100;
+const iterations = 1000;
 
 const L = Math.log(2);
 
-onmessage = (event) => {
+onmessage = async (event) => {
   // e.data : [starting x coord, y coord, x interval, # of points, max iterations]
   const data = event.data;
-  const [x, y, interval, nx, ny] = [data.x, data.y, data.interval, data.numPoints.x, data.numPoints.y];
-  const iterations = data.iterations;
+  const matrix = computeRGBMatrix(
+    data.x,
+    data.y,
+    data.interval,
+    data.numPoints.x,
+    data.numPoints.y
+  );
+  postMessage(matrix);
+}
+
+function computeRGBMatrix(x, y, interval, nx, ny) {
   let matrix = new Array(ny);
+
   for(let i = 0; i < ny; i++) {
     matrix[i] = new Array(3 * nx);
     for(let j = 0; j < nx; j++) {
@@ -32,7 +43,8 @@ onmessage = (event) => {
       }
     }
   }
-  postMessage(matrix);
+
+  return matrix;
 }
 
 function findColor(j) {
