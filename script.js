@@ -1,7 +1,7 @@
-const squareSize = 4;
+const squareSize = 8;
 
 const cameraPresets = [
-  {x: -.5, y: 0, zoom: 2},
+  {x: -.5, y: 0, zoom: 4},
   {x: -1.05, y: .305, zoom: .5},
   {x: -1.256, y: .381, zoom: .02},
   {x: -.02, y: .792, zoom: .05},
@@ -18,11 +18,7 @@ const cameraPresets = [
 function init() {
   const cvs = Mandelbrot.cvs = document.getElementById('cvs');
   const ctx = Mandelbrot.ctx = Mandelbrot.cvs.getContext('2d');
-  const camera = Mandelbrot.camera = {
-    x: -0.5,
-    y: 0,
-    zoom: 4
-  };
+  let camera = Mandelbrot.camera = cameraPresets[0];
 
   document.body.style.margin = '0px';
   document.body.style.overflow = 'hidden';
