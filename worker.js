@@ -1,7 +1,6 @@
 const COLOR_CYCLE = 100;
-const COLOR_RESOLUTION = 10;
 
-const ESCAPE = 4;
+const ESCAPE = 16;
 
 onmessage = async (event) => {
   // e.data : [starting x coord, y coord, x interval, # of points, max iterations]
@@ -40,6 +39,7 @@ function computeRGBMatrix(x, y, interval, nx, ny) {
         matrix[i][3*j] = matrix[i][3*j+1] = matrix[i][3*j+2] = 0;
       }
     }
+    postMessage((i + 1) / ny);
   }
 
   return matrix;
