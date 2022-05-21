@@ -15,7 +15,6 @@ const cameraPresets = [
 async function init() {
   const cvs = Mandelbrot.cvs = document.getElementById('cvs');
   const ctx = Mandelbrot.ctx = Mandelbrot.cvs.getContext('2d');
-  let camera = Mandelbrot.camera = cameraPresets[0];
   let inputs = {
     captureMode: false,
     mode: 2
@@ -25,6 +24,22 @@ async function init() {
 
   document.body.style.margin = '0px';
   document.body.style.overflow = 'hidden';
+
+  let camera;
+  if(localStorage.mandelbrotCamera) {
+    try {
+      let camera_ = JSON.parse(localStorage.mandelbrotCamera);
+      camera = Mandelbrot.camera = {
+        x: typeof camera_.x === 'number' ? camera_.x : -.5,
+        y: typeof camera_.y === 'number' ? camera_.y : 0,
+        zoom: typeof camera_.zoom === 'number' ? camera_.zoom : 4
+      };
+    } catch {
+      camera = Mandelbrot.camera = {x: -.5, y: 0, zoom: 4};
+    }
+  } else {
+    camera = Mandelbrot.camera = {x: -.5, y: 0, zoom: 4};
+  }
 
   function fullscreen() {
     cvs.width = window.innerWidth;
@@ -70,6 +85,9 @@ async function init() {
     switch(e.key) {
       case ' ':
         inputs.captureMode = !inputs.captureMode;
+        break;
+      case 'r':
+        Mandelbrot.updateCamera(-.5, 0, 4, camera.resolution);
         break;
       case '1':
       case '2':
@@ -158,7 +176,8 @@ const Mandelbrot = {
       Mandelbrot.camera.x = x;
       Mandelbrot.camera.y = y;
       Mandelbrot.camera.zoom = zoom;
-      Mandelbrot.resolution = resolution;
+      Mandelbrot.camera.resolution = resolution;
+      localStorage.mandelbrotCamera = JSON.stringify(Mandelbrot.camera);
     }).catch(console.log);
   },
 
@@ -201,6 +220,7 @@ function drawOverlay(cvs, camera, captureMode) {
     [20, 24, 'Camera controls:', ''],
     [30, 28, 'LMB', 'Set center'],
     [30, 24, 'Wheel', 'Zoom'],
+    [30, 24, 'R', 'Reset'],
     [20, 32, 'Resolution controls:', ''],
     [30, 28, '1', '8 pixels (fastest)', camera.resolution === 8],
     [30, 24, '2', '4 pixels', camera.resolution === 4],
@@ -210,7 +230,7 @@ function drawOverlay(cvs, camera, captureMode) {
     [30, 28, 'Space', 'Toggle capture mode'],
   ];
   const CONTROL_BOX_WIDTH = 440;
-  const CONTROL_BOX_HEIGHT = 290;
+  const CONTROL_BOX_HEIGHT = 310;
   const CONTROL_COLUMN_WIDTH = 160;
 
   // draw boxes
