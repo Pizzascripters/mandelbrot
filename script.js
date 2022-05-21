@@ -41,6 +41,15 @@ async function init() {
     camera = Mandelbrot.camera = {x: -.5, y: 0, zoom: 4};
   }
 
+  function setCaptureMode(toggle) {
+    inputs.captureMode = toggle;
+    if(toggle) {
+      overlay.style.visibility = 'hidden';
+    } else {
+      overlay.style.visibility = 'visible';
+    }
+  }
+
   function fullscreen() {
     cvs.width = window.innerWidth;
     cvs.height = window.innerHeight;
@@ -79,12 +88,12 @@ async function init() {
 
   window.addEventListener('keydown', (e) => {
     if(inputs.captureMode) {
-      inputs.captureMode = false;
+      setCaptureMode(false);
       return;
     }
     switch(e.key) {
       case ' ':
-        inputs.captureMode = !inputs.captureMode;
+        setCaptureMode(!inputs.captureMode);
         break;
       case 'r':
         Mandelbrot.updateCamera(-.5, 0, 4, camera.resolution);
@@ -123,7 +132,7 @@ async function init() {
 
   while(true) {
     await new Promise((resolve) => {
-      drawOverlay(overlay, camera, inputs.captureMode);
+      drawOverlay(overlay, camera);
       window.requestAnimationFrame(resolve);
     });
   }
@@ -145,7 +154,7 @@ const Mandelbrot = {
       // Prevent overlapping computations and renders
       Mandelbrot.worker.terminate();
     }
-    Mandelbrot.worker = new Worker('worker.js');
+    Mandelbrot.worker = new Worker('./worker.js');
 
     Mandelbrot.worker.postMessage({
       x: camera.x - 0.5 * camera.zoom,
@@ -196,13 +205,9 @@ const Mandelbrot = {
   }
 }
 
-function drawOverlay(cvs, camera, captureMode) {
+function drawOverlay(cvs, camera) {
   const ctx = cvs.getContext('2d');
   ctx.clearRect(0, 0, cvs.width, cvs.height);
-
-  if(captureMode) {
-    return;
-  }
 
   const INFO_TEXT = [
     [24, 24, 'Camera:', ''],
